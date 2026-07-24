@@ -20,8 +20,8 @@ export default function Onboarding() {
           <Text style={styles.tag}>RITUALO</Text>
           <Text style={styles.h1}>Grow together.</Text>
           <Text style={styles.p}>
-            One tiny ritual a day, and your family's Magical Forest comes alive — together. No nagging.
-            No leaderboards. Just showing up.
+            A shared Magical Forest that grows every time your family shows up for each other — one small
+            ritual at a time.
           </Text>
           <Button label="Begin the Journey →" onPress={() => router.push('/(auth)/sign-up')} />
           <Text style={styles.link} onPress={() => router.push('/(auth)/sign-in')}>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthUser, Completion, Family, Habit, Member, ForestStageName } from '../data/types';
+import { GrowthType } from '../data/templates';
 
 const STORAGE_KEY = 'ritualo:v1';
 
@@ -68,12 +69,22 @@ interface AppStateValue extends PersistedState {
   joinFamily: (code: string, memberName: string, role: 'parent' | 'kid', emoji: string) => Promise<void>;
   addMember: (name: string, role: 'parent' | 'kid', emoji: string) => Promise<void>;
   setActiveMember: (memberId: string) => void;
-  addHabit: (memberId: string, label: string, emoji: string, growthLabel: string, stars: number) => Promise<void>;
+  addHabit: (
+    memberId: string,
+    label: string,
+    emoji: string,
+    growthLabel: string,
+    growthType: GrowthType,
+    stars: number
+  ) => Promise<void>;
   completeHabit: (habitId: string) => Promise<void>;
   isCompletedToday: (habitId: string) => boolean;
   habitsFor: (memberId: string) => Habit[];
   reactToCompletion: (completionId: string, emoji: string) => Promise<void>;
   weeklyStats: () => { totalCompletions: number; mvpMemberId: string | null };
+  streakFor: (habitId: string) => number;
+  growthCounts: () => Record<GrowthType, number>;
+  membersMissingHabits: () => Member[];
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null);
@@ -168,8 +179,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addHabit = useCallback(
-    async (memberId: string, label: string, emoji: string, growthLabel: string, stars: number) => {
-      const habit: Habit = { id: genId('habit'), memberId, label, emoji, growthLabel, stars };
+    async (
+      memberId: string,
+      label: string,
+      emoji: string,
+      growthLabel: string,
+      growthType: GrowthType,
+      stars: number
+    ) => {
+      const habit: Habit = { id: genId('habit'), memberId, label, emoji, growthLabel, growthType, stars };
       persist({ ...state, habits: [...state.habits, habit] });
     },
     [state, persist]
@@ -229,6 +247,45 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return { totalCompletions: inWeek.length, mvpMemberId };
   }, [state.completions]);
 
+  const streakFor = useCallback(
+    (habitId: string) => {
+      const days = new Set(
+        state.completions
+          .filter((c) => c.habitId === habitId)
+          .map((c) => {
+            const d = new Date(c.completedAt);
+            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+          })
+      );
+      let streak = 0;
+      const cursor = new Date();
+      // A streak counts today only if already completed; otherwise starts checking from yesterday.
+      if (!days.has(`${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`)) {
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      while (days.has(`${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`)) {
+        streak += 1;
+        cursor.setDate(cursor.getDate() - 1);
+      }
+      return streak;
+    },
+    [state.completions]
+  );
+
+  const growthCounts = useCallback((): Record<GrowthType, number> => {
+    const counts: Record<GrowthType, number> = { mushroom: 0, firefly: 0, tree: 0, creature: 0 };
+    for (const c of state.completions) {
+      const habit = state.habits.find((h) => h.id === c.habitId);
+      if (habit) counts[habit.growthType] += 1;
+    }
+    return counts;
+  }, [state.completions, state.habits]);
+
+  const membersMissingHabits = useCallback(
+    () => state.members.filter((m) => !state.habits.some((h) => h.memberId === m.id)),
+    [state.members, state.habits]
+  );
+
   const activeMember = useMemo(
     () => state.members.find((m) => m.id === state.activeMemberId) ?? null,
     [state.members, state.activeMemberId]
@@ -256,6 +313,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     habitsFor,
     reactToCompletion,
     weeklyStats,
+    streakFor,
+    growthCounts,
+    membersMissingHabits,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

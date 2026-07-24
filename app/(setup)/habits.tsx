@@ -1,21 +1,40 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../../src/theme/ThemeContext';
 import { radius, spacing } from '../../src/theme/tokens';
 import { useAppState } from '../../src/context/AppStateContext';
 import { templatesFor } from '../../src/data/templates';
 import { Button } from '../../src/components/Button';
+import { AvatarCircle } from '../../src/components/AvatarCircle';
 
 export default function HabitSetup() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { activeMember, addHabit } = useAppState();
+  const { members, activeMember, addHabit, membersMissingHabits } = useAppState();
+  const { memberId: memberIdParam } = useLocalSearchParams<{ memberId?: string }>();
+
+  // Single-member mode (e.g. "Add a ritual" from Profile) vs. the full-family
+  // setup wizard that runs right after creating/joining a forest.
+  const wizardQueue = useMemo(() => {
+    if (memberIdParam) {
+      const m = members.find((x) => x.id === memberIdParam);
+      return m ? [m] : [];
+    }
+    const missing = membersMissingHabits();
+    return missing.length > 0 ? missing : activeMember ? [activeMember] : [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [step, setStep] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const templates = templatesFor(activeMember?.role ?? 'parent');
+  const member = wizardQueue[step];
+  const isLast = step >= wizardQueue.length - 1;
+  const nextMember = !isLast ? wizardQueue[step + 1] : null;
+  const templates = templatesFor(member?.role ?? 'parent');
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -26,15 +45,28 @@ export default function HabitSetup() {
   };
 
   const submit = async () => {
-    if (!activeMember || selected.length === 0) return;
+    if (!member || selected.length === 0) return;
     setLoading(true);
     for (const id of selected) {
       const t = templates.find((x) => x.id === id)!;
-      await addHabit(activeMember.id, t.label, t.emoji, t.growthLabel, t.stars);
+      await addHabit(member.id, t.label, t.emoji, t.growthLabel, t.growthType, t.stars);
     }
     setLoading(false);
-    router.replace('/(app)/home');
+    setSelected([]);
+    if (isLast) {
+      router.replace('/(app)/home');
+    } else {
+      setStep((s) => s + 1);
+    }
   };
+
+  if (!member) {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: c.onSurfaceSecondary, fontFamily: 'Nunito_400Regular' }}>Nothing to set up.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.surface }}>
@@ -45,9 +77,15 @@ export default function HabitSetup() {
           paddingHorizontal: spacing.xl,
         }}
       >
-        <Text style={styles.critter}>🌱</Text>
-        <Text style={[styles.h1, { color: c.onSurface }]}>Let's plant some seeds, {activeMember?.name}</Text>
-        <Text style={[styles.p, { color: c.onSurfaceSecondary }]}>Pick 1 to 3 daily rituals to start with.</Text>
+        <View style={styles.header}>
+          <AvatarCircle uri={member.avatarUri} emoji={member.emoji} size={44} />
+          <View>
+            <Text style={[styles.h1, { color: c.onSurface }]}>{member.name}'s rituals</Text>
+            <Text style={[styles.p, { color: c.onSurfaceSecondary }]}>
+              Member {step + 1} of {wizardQueue.length} · pick 1–3
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.grid}>
           {templates.map((t) => {
@@ -64,7 +102,7 @@ export default function HabitSetup() {
                   },
                 ]}
               >
-                <Text style={{ fontSize: 26 }}>{t.emoji}</Text>
+                <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
                 <Text style={[styles.chipLabel, { color: c.onSurface }]}>{t.label}</Text>
               </Pressable>
             );
@@ -74,7 +112,13 @@ export default function HabitSetup() {
 
       <View style={{ paddingHorizontal: spacing.xl, paddingBottom: insets.bottom + spacing.lg }}>
         <Button
-          label={selected.length === 0 ? 'Pick at least one' : `Start growing (${selected.length})`}
+          label={
+            selected.length === 0
+              ? 'Pick at least one'
+              : isLast
+              ? `Start growing (${selected.length})`
+              : `Next: ${nextMember?.name}`
+          }
           onPress={submit}
           disabled={selected.length === 0}
           loading={loading}
@@ -85,17 +129,18 @@ export default function HabitSetup() {
 }
 
 const styles = StyleSheet.create({
-  critter: { fontSize: 40, marginBottom: spacing.md },
-  h1: { fontFamily: 'Fraunces_500Medium', fontSize: 22, marginBottom: spacing.xs },
-  p: { fontFamily: 'Nunito_400Regular', fontSize: 13.5, marginBottom: spacing.xl, lineHeight: 19 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.xl },
+  h1: { fontFamily: 'Fraunces_500Medium', fontSize: 20 },
+  p: { fontFamily: 'Nunito_400Regular', fontSize: 12.5, marginTop: 2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
-    width: '47%',
-    borderWidth: 1.5,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    borderWidth: 1.5,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  chipLabel: { fontFamily: 'Nunito_500Medium', fontSize: 13, textAlign: 'center' },
+  chipLabel: { fontFamily: 'Nunito_500Medium', fontSize: 13 },
 });

@@ -4,16 +4,25 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/ThemeContext';
 import { images, radius, spacing } from '../theme/tokens';
-import { useAppState, FOREST_STAGES } from '../context/AppStateContext';
+import { useAppState } from '../context/AppStateContext';
+import { GrowthType } from '../data/templates';
 import { ScrimImage } from '../components/ScrimImage';
 import { AvatarCircle } from '../components/AvatarCircle';
+
+const GROWTH_META: Record<GrowthType, { label: string; emoji: string }> = {
+  mushroom: { label: 'mushrooms', emoji: '🍄' },
+  firefly: { label: 'fireflies', emoji: '✨' },
+  tree: { label: 'trees', emoji: '🌲' },
+  creature: { label: 'creatures', emoji: '🦊' },
+};
 
 export default function HomeParent() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { family, members, habits, isCompletedToday, forest, activeMember } = useAppState();
+  const { family, members, habits, isCompletedToday, forest, activeMember, streakFor, growthCounts } =
+    useAppState();
 
-  const stageIndex = FOREST_STAGES.findIndex((s) => s.name === forest.stage);
+  const counts = growthCounts();
 
   return (
     <View style={{ flex: 1, backgroundColor: c.surface }}>
@@ -37,47 +46,70 @@ export default function HomeParent() {
         </ScrimImage>
       </View>
 
+      <View style={[styles.statsRow, { backgroundColor: c.surface, borderColor: c.border }]}>
+        {(Object.keys(GROWTH_META) as GrowthType[]).map((key) => (
+          <Text key={key} style={[styles.statText, { color: c.onSurfaceSecondary }]}>
+            {GROWTH_META[key].emoji} {counts[key] ?? 0} {GROWTH_META[key].label}
+          </Text>
+        ))}
+      </View>
+
       <ScrollView
         style={styles.habitList}
-        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl, paddingTop: spacing.lg }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl, paddingTop: spacing.md }}
       >
         <Text style={[styles.sectionTitle, { color: c.onSurface }]}>Today's rituals</Text>
         {habits.length === 0 && (
           <Text style={{ color: c.onSurfaceSecondary, fontFamily: 'Nunito_400Regular', fontSize: 13.5 }}>
-            No rituals yet. Add some from Profile → Habit Setup.
+            No rituals yet. Add some from Profile → Add a ritual.
           </Text>
         )}
-        {habits.map((h) => {
-          const member = members.find((m) => m.id === h.memberId);
-          const done = isCompletedToday(h.id);
-          const canTap = h.memberId === activeMember?.id;
+        {members.map((member) => {
+          const memberHabits = habits.filter((h) => h.memberId === member.id);
+          if (memberHabits.length === 0) return null;
           return (
-            <Pressable
-              key={h.id}
-              disabled={done || !canTap}
-              onPress={() => router.push({ pathname: '/checkin/[habitId]', params: { habitId: h.id } })}
-              style={[styles.habitRow, { backgroundColor: '#FFFFFF', borderColor: c.border }]}
-            >
-              <AvatarCircle emoji={member?.emoji} size={34} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.habitLabel, { color: c.onSurface }]}>
-                  {member?.name} · {h.label}
-                </Text>
-                <Text style={[styles.habitSub, { color: c.onSurfaceSecondary }]}>
-                  {done ? 'Completed today' : canTap ? 'Tap to check in' : 'Not yet today'}
-                </Text>
+            <View key={member.id} style={{ marginBottom: spacing.md }}>
+              <View style={styles.memberHeader}>
+                <AvatarCircle emoji={member.emoji} uri={member.avatarUri} size={22} />
+                <Text style={[styles.memberName, { color: c.onSurface }]}>{member.name}</Text>
               </View>
-              <View
-                style={[
-                  styles.checkCircle,
-                  done
-                    ? { backgroundColor: c.brand }
-                    : { borderWidth: 2, borderColor: c.borderStrong, backgroundColor: 'transparent' },
-                ]}
-              >
-                {done && <Text style={{ color: '#fff', fontSize: 12, fontFamily: 'Nunito_500Medium' }}>✓</Text>}
-              </View>
-            </Pressable>
+              {memberHabits.map((h) => {
+                const done = isCompletedToday(h.id);
+                const canTap = h.memberId === activeMember?.id;
+                const streak = streakFor(h.id);
+                return (
+                  <Pressable
+                    key={h.id}
+                    disabled={done || !canTap}
+                    onPress={() => router.push({ pathname: '/checkin/[habitId]', params: { habitId: h.id } })}
+                    style={[styles.habitRow, { backgroundColor: '#FFFFFF', borderColor: c.border }]}
+                  >
+                    <Text style={{ fontSize: 18 }}>{h.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.habitLabel, { color: c.onSurface }]}>{h.label}</Text>
+                      <Text style={[styles.habitSub, { color: c.onSurfaceSecondary }]}>
+                        {streak > 0 ? `${streak}-day streak` : canTap ? 'Tap to check in' : 'Not yet today'}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        { backgroundColor: done ? c.brand : canTap ? c.brandPrimary : c.surfaceSecondary },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusPillText,
+                          { color: done || canTap ? '#FFFFFF' : c.onSurfaceTertiary },
+                        ]}
+                      >
+                        {done ? 'Done ✓' : canTap ? 'DONE' : 'Waiting'}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
           );
         })}
       </ScrollView>
@@ -86,7 +118,7 @@ export default function HomeParent() {
 }
 
 const styles = StyleSheet.create({
-  forestFrame: { height: '38%' },
+  forestFrame: { height: '34%' },
   topBar: {
     position: 'absolute',
     top: spacing.lg,
@@ -118,8 +150,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   stageChipText: { color: '#FFFFFF', fontFamily: 'Nunito_500Medium', fontSize: 11.5 },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: spacing.md,
+    rowGap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+  },
+  statText: { fontFamily: 'Nunito_500Medium', fontSize: 11.5 },
   habitList: { flex: 1, paddingHorizontal: spacing.lg },
   sectionTitle: { fontFamily: 'Fraunces_500Medium', fontSize: 17, marginBottom: spacing.md },
+  memberHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  memberName: { fontFamily: 'Nunito_500Medium', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4 },
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -131,5 +175,6 @@ const styles = StyleSheet.create({
   },
   habitLabel: { fontFamily: 'Nunito_500Medium', fontSize: 13.5 },
   habitSub: { fontFamily: 'Nunito_400Regular', fontSize: 11.5, marginTop: 2 },
-  checkCircle: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  statusPill: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  statusPillText: { fontFamily: 'Nunito_500Medium', fontSize: 11 },
 });

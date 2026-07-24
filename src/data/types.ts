@@ -1,3 +1,5 @@
+import { GrowthType } from './templates';
+
 export type Role = 'parent' | 'kid';
 
 export interface Member {
@@ -14,6 +16,7 @@ export interface Habit {
   label: string;
   emoji: string;
   growthLabel: string; // e.g. "a new pine tree appeared"
+  growthType: GrowthType;
   stars: number;
 }
 

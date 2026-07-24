@@ -48,7 +48,14 @@ export default function Profile() {
 
       <Text style={[styles.sectionTitle, { color: c.onSurface }]}>Settings</Text>
       <View style={[styles.card, { backgroundColor: '#FFFFFF', borderColor: c.border }]}>
-        <SettingsRow icon="plus-circle" label="Add a ritual" color={c.brandPrimary} onPress={() => router.push('/(setup)/habits')} />
+        <SettingsRow
+          icon="plus-circle"
+          label="Add a ritual"
+          color={c.brandPrimary}
+          onPress={() =>
+            activeMember && router.push({ pathname: '/(setup)/habits', params: { memberId: activeMember.id } })
+          }
+        />
         <SettingsRow icon="users" label="Switch family member" color={c.brandPrimary} onPress={() => router.push('/(setup)/who-is-this')} />
         <SettingsRow icon="user-plus" label="Invite a family member" color={c.brandPrimary} onPress={() => router.push('/(setup)/invite')} />
         <SettingsRow
