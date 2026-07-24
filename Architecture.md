@@ -125,10 +125,18 @@ placed sprite** on a persistent world canvas
 sprites never move as the forest grows, they only accumulate. `ForestScene`
 (`src/components/ForestScene.tsx`) renders that canvas with pinch/pan
 (react-native-gesture-handler `Gesture.Simultaneous(Pan, Pinch)` +
-Reanimated shared values) and is the check-in screen's background
-(`app/checkin/[habitId].tsx`) — explorable before you check in, and on
-completion it zooms/pans to the newly-grown sprite with a spring entrance +
-glow.
+Reanimated shared values). It measures its own container via `onLayout`
+(not `useWindowDimensions()`), so the same component works both full-screen
+and embedded in a shorter frame, and is used in two places:
+
+- **Home hero** (`src/screens/HomeParent.tsx`, `HomeKid.tsx`) — the
+  permanent, always-visible view of the family's accumulated forest.
+  Interactive (pinch/pan) on Parent Home; non-interactive on Kid Home since
+  it spans the full screen behind a scrolling habit list there and would
+  otherwise fight the list's own pan gesture.
+- **Check-in** (`app/checkin/[habitId].tsx`) — explorable before you check
+  in, and on completion it zooms/pans to the newly-grown sprite with a
+  spring entrance + glow.
 
 Two non-obvious things baked into that math, worth knowing before touching
 it: CSS/RN `transform: scale` pivots around the element's own center, not
