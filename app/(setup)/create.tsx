@@ -12,8 +12,8 @@ import { EmojiPicker } from '../../src/components/EmojiPicker';
 export default function CreateFamily() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { createFamily } = useAppState();
-  const [forestName, setForestName] = useState('The Family Forest');
+  const { createFamily, authUser } = useAppState();
+  const [forestName, setForestName] = useState(authUser?.name || 'The Family Forest');
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🦊');
   const [loading, setLoading] = useState(false);
