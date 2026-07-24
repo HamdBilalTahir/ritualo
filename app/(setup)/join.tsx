@@ -8,6 +8,7 @@ import { useAppState } from '../../src/context/AppStateContext';
 import { TextField } from '../../src/components/TextField';
 import { Button } from '../../src/components/Button';
 import { EmojiPicker } from '../../src/components/EmojiPicker';
+import { PhotoPicker } from '../../src/components/PhotoPicker';
 import { CodeInput } from '../../src/components/CodeInput';
 
 export default function JoinFamily() {
@@ -18,12 +19,16 @@ export default function JoinFamily() {
   const [name, setName] = useState('');
   const [role, setRole] = useState<'parent' | 'kid'>('kid');
   const [emoji, setEmoji] = useState('🐰');
+  const [avatarUri, setAvatarUri] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
     if (code.trim().length < 6 || !name.trim()) return;
+    if (!avatarUri) return setPhotoError('Add a photo to continue.');
+    setPhotoError('');
     setLoading(true);
-    await joinFamily(code.trim(), name.trim(), role, emoji);
+    await joinFamily(code.trim(), name.trim(), role, emoji, avatarUri);
     setLoading(false);
     router.push('/(setup)/habits');
   };
@@ -63,7 +68,12 @@ export default function JoinFamily() {
           </Pressable>
         </View>
 
-        <Text style={[styles.label, { color: c.onSurface, marginTop: spacing.lg }]}>Pick your avatar</Text>
+        <Text style={[styles.label, { color: c.onSurface, marginTop: spacing.lg }]}>Add your photo</Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          <PhotoPicker uri={avatarUri} onChange={(uri) => { setAvatarUri(uri); setPhotoError(''); }} error={photoError} />
+        </View>
+
+        <Text style={[styles.label, { color: c.onSurface }]}>Pick a critter badge</Text>
         <View style={{ marginBottom: spacing.xl }}>
           <EmojiPicker value={emoji} onChange={setEmoji} />
         </View>

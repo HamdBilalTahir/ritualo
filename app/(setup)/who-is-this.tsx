@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../../src/theme/ThemeContext';
 import { radius, spacing } from '../../src/theme/tokens';
 import { useAppState } from '../../src/context/AppStateContext';
+import { AvatarCircle } from '../../src/components/AvatarCircle';
 
 export default function WhoIsThis() {
   const c = useColors();
@@ -33,9 +34,7 @@ export default function WhoIsThis() {
       <ScrollView contentContainerStyle={styles.grid}>
         {members.map((m) => (
           <Pressable key={m.id} onPress={() => pick(m.id)} style={[styles.card, { backgroundColor: c.surfaceSecondary, borderColor: c.border }]}>
-            <View style={[styles.avatar, { backgroundColor: c.brandTertiary }]}>
-              <Text style={{ fontSize: 30 }}>{m.emoji}</Text>
-            </View>
+            <AvatarCircle uri={m.avatarUri} emoji={m.emoji} size={56} />
             <Text style={[styles.name, { color: c.onSurface }]}>{m.name}</Text>
           </Pressable>
         ))}
@@ -50,6 +49,5 @@ const styles = StyleSheet.create({
   p: { fontFamily: 'Nunito_400Regular', fontSize: 13.5, textAlign: 'center', marginBottom: spacing.xl, lineHeight: 19 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
   card: { width: 110, borderWidth: 1.5, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center', gap: spacing.sm },
-  avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   name: { fontFamily: 'Nunito_500Medium', fontSize: 13 },
 });

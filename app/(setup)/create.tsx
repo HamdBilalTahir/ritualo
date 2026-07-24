@@ -8,6 +8,7 @@ import { useAppState } from '../../src/context/AppStateContext';
 import { TextField } from '../../src/components/TextField';
 import { Button } from '../../src/components/Button';
 import { EmojiPicker } from '../../src/components/EmojiPicker';
+import { PhotoPicker } from '../../src/components/PhotoPicker';
 
 export default function CreateFamily() {
   const c = useColors();
@@ -16,12 +17,16 @@ export default function CreateFamily() {
   const [forestName, setForestName] = useState(authUser?.name || 'The Family Forest');
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('🦊');
+  const [avatarUri, setAvatarUri] = useState('');
+  const [photoError, setPhotoError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
     if (!name.trim() || !forestName.trim()) return;
+    if (!avatarUri) return setPhotoError('Add a photo to continue.');
+    setPhotoError('');
     setLoading(true);
-    await createFamily(forestName.trim(), name.trim(), emoji);
+    await createFamily(forestName.trim(), name.trim(), emoji, avatarUri);
     setLoading(false);
     router.push('/(setup)/invite');
   };
@@ -42,7 +47,12 @@ export default function CreateFamily() {
         <TextField label="Forest name" placeholder="The Family Forest" value={forestName} onChangeText={setForestName} />
         <TextField label="Your name" placeholder="Amara" value={name} onChangeText={setName} autoCapitalize="words" />
 
-        <Text style={[styles.label, { color: c.onSurface }]}>Pick your avatar</Text>
+        <Text style={[styles.label, { color: c.onSurface }]}>Add your photo</Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          <PhotoPicker uri={avatarUri} onChange={(uri) => { setAvatarUri(uri); setPhotoError(''); }} error={photoError} />
+        </View>
+
+        <Text style={[styles.label, { color: c.onSurface }]}>Pick a critter badge</Text>
         <View style={{ marginBottom: spacing.xl }}>
           <EmojiPicker value={emoji} onChange={setEmoji} />
         </View>

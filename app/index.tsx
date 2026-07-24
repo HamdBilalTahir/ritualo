@@ -12,7 +12,7 @@ export default function Gate() {
     if (!isAuthenticated) {
       router.replace('/onboarding');
     } else if (!hasFamily) {
-      router.replace('/(setup)');
+      router.replace('/(setup)/choose');
     } else if (members.length > 0 && !activeMember) {
       router.replace('/(setup)/who-is-this');
     } else {

@@ -65,9 +65,15 @@ interface AppStateValue extends PersistedState {
   signUp: (email: string, name: string) => Promise<void>;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  createFamily: (forestName: string, parentName: string, emoji: string) => Promise<void>;
-  joinFamily: (code: string, memberName: string, role: 'parent' | 'kid', emoji: string) => Promise<void>;
-  addMember: (name: string, role: 'parent' | 'kid', emoji: string) => Promise<void>;
+  createFamily: (forestName: string, parentName: string, emoji: string, avatarUri: string) => Promise<void>;
+  joinFamily: (
+    code: string,
+    memberName: string,
+    role: 'parent' | 'kid',
+    emoji: string,
+    avatarUri: string
+  ) => Promise<void>;
+  addMember: (name: string, role: 'parent' | 'kid', emoji: string, avatarUri: string) => Promise<void>;
   setActiveMember: (memberId: string) => void;
   addHabit: (
     memberId: string,
@@ -121,61 +127,70 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  const persist = useCallback((next: PersistedState) => {
-    setState(next);
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+  // Takes an updater (not a plain object) so calls made back-to-back in the
+  // same tick (e.g. a for-loop awaiting several mutations) each compose off
+  // the truly-latest pending state instead of a stale `state` closure -
+  // otherwise the last call in the loop would silently clobber the others.
+  const persist = useCallback((updater: (prev: PersistedState) => PersistedState) => {
+    setState((prev) => {
+      const next = updater(prev);
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
   }, []);
 
   const signUp = useCallback(
     async (email: string, name: string) => {
-      persist({ ...state, authUser: { email, name } });
+      persist((prev) => ({ ...prev, authUser: { email, name } }));
     },
-    [state, persist]
+    [persist]
   );
 
   const signIn = useCallback(
     async (email: string) => {
-      persist({ ...state, authUser: { email, name: state.authUser?.name ?? email.split('@')[0] } });
+      persist((prev) => ({ ...prev, authUser: { email, name: prev.authUser?.name ?? email.split('@')[0] } }));
     },
-    [state, persist]
+    [persist]
   );
 
   const signOut = useCallback(async () => {
-    persist(initialState);
+    persist(() => initialState);
   }, [persist]);
 
   const createFamily = useCallback(
-    async (forestName: string, parentName: string, emoji: string) => {
+    async (forestName: string, parentName: string, emoji: string, avatarUri: string) => {
       const family: Family = { id: genId('fam'), forestName, inviteCode: genInviteCode() };
-      const member: Member = { id: genId('mem'), name: parentName, role: 'parent', emoji };
-      persist({ ...state, family, members: [member], activeMemberId: member.id });
+      const member: Member = { id: genId('mem'), name: parentName, role: 'parent', emoji, avatarUri };
+      persist((prev) => ({ ...prev, family, members: [member], activeMemberId: member.id }));
     },
-    [state, persist]
+    [persist]
   );
 
   const joinFamily = useCallback(
-    async (code: string, memberName: string, role: 'parent' | 'kid', emoji: string) => {
-      // Demo mode: any 6-char code creates/joins a locally-simulated shared family.
-      const family: Family = state.family ?? { id: genId('fam'), forestName: 'The Family Forest', inviteCode: code.toUpperCase() };
-      const member: Member = { id: genId('mem'), name: memberName, role, emoji };
-      persist({ ...state, family, members: [...state.members, member], activeMemberId: member.id });
+    async (code: string, memberName: string, role: 'parent' | 'kid', emoji: string, avatarUri: string) => {
+      persist((prev) => {
+        // Demo mode: any 6-char code creates/joins a locally-simulated shared family.
+        const family: Family = prev.family ?? { id: genId('fam'), forestName: 'The Family Forest', inviteCode: code.toUpperCase() };
+        const member: Member = { id: genId('mem'), name: memberName, role, emoji, avatarUri };
+        return { ...prev, family, members: [...prev.members, member], activeMemberId: member.id };
+      });
     },
-    [state, persist]
+    [persist]
   );
 
   const addMember = useCallback(
-    async (name: string, role: 'parent' | 'kid', emoji: string) => {
-      const member: Member = { id: genId('mem'), name, role, emoji };
-      persist({ ...state, members: [...state.members, member] });
+    async (name: string, role: 'parent' | 'kid', emoji: string, avatarUri: string) => {
+      const member: Member = { id: genId('mem'), name, role, emoji, avatarUri };
+      persist((prev) => ({ ...prev, members: [...prev.members, member] }));
     },
-    [state, persist]
+    [persist]
   );
 
   const setActiveMember = useCallback(
     (memberId: string) => {
-      persist({ ...state, activeMemberId: memberId });
+      persist((prev) => ({ ...prev, activeMemberId: memberId }));
     },
-    [state, persist]
+    [persist]
   );
 
   const addHabit = useCallback(
@@ -188,9 +203,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       stars: number
     ) => {
       const habit: Habit = { id: genId('habit'), memberId, label, emoji, growthLabel, growthType, stars };
-      persist({ ...state, habits: [...state.habits, habit] });
+      persist((prev) => ({ ...prev, habits: [...prev.habits, habit] }));
     },
-    [state, persist]
+    [persist]
   );
 
   const isCompletedToday = useCallback(
@@ -200,31 +215,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const completeHabit = useCallback(
     async (habitId: string) => {
-      const habit = state.habits.find((h) => h.id === habitId);
-      if (!habit) return;
-      if (isCompletedToday(habitId)) return;
-      const completion: Completion = {
-        id: genId('comp'),
-        habitId,
-        memberId: habit.memberId,
-        completedAt: new Date().toISOString(),
-        reactions: [],
-      };
-      persist({ ...state, completions: [completion, ...state.completions] });
+      persist((prev) => {
+        const habit = prev.habits.find((h) => h.id === habitId);
+        if (!habit) return prev;
+        const alreadyDone = prev.completions.some((c) => c.habitId === habitId && isToday(c.completedAt));
+        if (alreadyDone) return prev;
+        const completion: Completion = {
+          id: genId('comp'),
+          habitId,
+          memberId: habit.memberId,
+          completedAt: new Date().toISOString(),
+          reactions: [],
+        };
+        return { ...prev, completions: [completion, ...prev.completions] };
+      });
     },
-    [state, persist, isCompletedToday]
+    [persist]
   );
 
   const reactToCompletion = useCallback(
     async (completionId: string, emoji: string) => {
-      persist({
-        ...state,
-        completions: state.completions.map((c) =>
+      persist((prev) => ({
+        ...prev,
+        completions: prev.completions.map((c) =>
           c.id === completionId ? { ...c, reactions: [...c.reactions, emoji] } : c
         ),
-      });
+      }));
     },
-    [state, persist]
+    [persist]
   );
 
   const habitsFor = useCallback((memberId: string) => state.habits.filter((h) => h.memberId === memberId), [

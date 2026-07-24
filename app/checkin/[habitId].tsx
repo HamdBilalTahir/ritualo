@@ -1,43 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withSequence,
-  withTiming,
-  withDelay,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
 import { ModeProvider, useColors } from '../../src/theme/ThemeContext';
-import { images, radius, spacing } from '../../src/theme/tokens';
+import { radius, spacing } from '../../src/theme/tokens';
 import { useAppState } from '../../src/context/AppStateContext';
-import { ScrimImage } from '../../src/components/ScrimImage';
-
-function Firefly({ delay, top, left }: { delay: number; top: string; left: string }) {
-  const opacity = useSharedValue(0);
-  React.useEffect(() => {
-    opacity.value = withDelay(delay, withSequence(withTiming(1, { duration: 400 }), withTiming(0.4, { duration: 800 })));
-  }, []);
-  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return <Animated.View style={[styles.firefly, { top, left } as any, style]} />;
-}
+import { ForestScene } from '../../src/components/ForestScene';
 
 function CheckInContent() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { habitId } = useLocalSearchParams<{ habitId: string }>();
-  const { habits, members, completeHabit, isCompletedToday } = useAppState();
+  const { habits, members, completions, completeHabit, isCompletedToday, loading } = useAppState();
   const [celebrating, setCelebrating] = useState(false);
   const scale = useSharedValue(1);
 
   const habit = habits.find((h) => h.id === habitId);
   const member = members.find((m) => m.id === habit?.memberId);
   const alreadyDone = habit ? isCompletedToday(habit.id) : true;
+  const highlightId = celebrating ? completions.find((cm) => cm.habitId === habit?.id)?.id ?? null : null;
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  useEffect(() => {
+    if (!loading && !habit) {
+      router.replace('/');
+    }
+  }, [loading, habit]);
 
   const onDone = async () => {
     if (!habit || alreadyDone) return;
@@ -49,26 +40,19 @@ function CheckInContent() {
   };
 
   if (!habit) {
-    return (
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Text>Habit not found.</Text>
-      </View>
-    );
+    return <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]} />;
   }
 
   return (
     <View style={{ flex: 1 }}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
-      <ScrimImage source={images.magicalForestHero} strength="strong" style={StyleSheet.absoluteFill}>
-        {celebrating && (
-          <>
-            <Firefly delay={0} top="18%" left="20%" />
-            <Firefly delay={150} top="30%" left="72%" />
-            <Firefly delay={300} top="12%" left="55%" />
-            <Firefly delay={450} top="42%" left="35%" />
-          </>
-        )}
-      </ScrimImage>
+      <ForestScene completions={completions} habits={habits} highlightId={highlightId} interactive={!celebrating} />
+
+      <Pressable
+        onPress={() => router.back()}
+        style={[styles.closeBtn, { top: insets.top + spacing.sm, backgroundColor: 'rgba(20,26,20,0.45)' }]}
+      >
+        <Text style={styles.closeLabel}>✕</Text>
+      </Pressable>
 
       <View style={{ flex: 1 }} />
       <View style={[styles.sheet, { backgroundColor: '#FFFFFF', paddingBottom: insets.bottom + spacing.xl }]}>
@@ -80,7 +64,7 @@ function CheckInContent() {
         <Text style={[styles.p, { color: c.onSurfaceSecondary }]}>
           {celebrating
             ? `${member?.name} just ${habit.growthLabel}! 🎉`
-            : `Tap when you're done — your family will see it right away.`}
+            : `Tap when you're done — pinch & drag to explore your growing forest.`}
         </Text>
 
         <Pressable onPress={onDone} disabled={alreadyDone || celebrating}>
@@ -149,11 +133,14 @@ const styles = StyleSheet.create({
   doneText: { fontFamily: 'Fraunces_500Medium', fontSize: 22, color: '#FFFFFF' },
   doneSub: { fontFamily: 'Nunito_500Medium', fontSize: 11, color: '#FFFFFF', opacity: 0.85, letterSpacing: 0.5, textTransform: 'uppercase' },
   proof: { fontFamily: 'Nunito_400Regular', fontSize: 11.5, marginTop: spacing.lg },
-  firefly: {
+  closeBtn: {
     position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#FFE9A8',
+    right: spacing.lg,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  closeLabel: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Nunito_500Medium' },
 });
