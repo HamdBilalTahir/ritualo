@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +29,7 @@ function CheckInContent() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { habitId } = useLocalSearchParams<{ habitId: string }>();
-  const { habits, members, completeHabit, isCompletedToday } = useAppState();
+  const { habits, members, completeHabit, isCompletedToday, loading } = useAppState();
   const [celebrating, setCelebrating] = useState(false);
   const scale = useSharedValue(1);
 
@@ -38,6 +38,12 @@ function CheckInContent() {
   const alreadyDone = habit ? isCompletedToday(habit.id) : true;
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  useEffect(() => {
+    if (!loading && !habit) {
+      router.replace('/');
+    }
+  }, [loading, habit]);
 
   const onDone = async () => {
     if (!habit || alreadyDone) return;
@@ -49,11 +55,7 @@ function CheckInContent() {
   };
 
   if (!habit) {
-    return (
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]}>
-        <Text>Habit not found.</Text>
-      </View>
-    );
+    return <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.xl }]} />;
   }
 
   return (
