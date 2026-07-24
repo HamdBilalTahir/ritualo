@@ -30,3 +30,21 @@ export const parentHabitTemplates: HabitTemplate[] = [
 export function templatesFor(role: 'parent' | 'kid') {
   return role === 'kid' ? kidHabitTemplates : parentHabitTemplates;
 }
+
+export const growthTypeOptions: { type: GrowthType; label: string; emoji: string }[] = [
+  { type: 'mushroom', label: 'Mushroom', emoji: '🍄' },
+  { type: 'firefly', label: 'Firefly', emoji: '✨' },
+  { type: 'tree', label: 'Tree', emoji: '🌳' },
+  { type: 'creature', label: 'Woodland friend', emoji: '🦊' },
+];
+
+const defaultGrowthLabels: Record<GrowthType, string> = {
+  mushroom: 'a mushroom sprouted',
+  firefly: 'a firefly lit up the grove',
+  tree: 'a new tree grew',
+  creature: 'a new woodland friend appeared',
+};
+
+export function defaultGrowthLabelFor(growthType: GrowthType) {
+  return defaultGrowthLabels[growthType];
+}
