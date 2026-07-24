@@ -7,7 +7,7 @@ fireflies, and trees.
 
 Built with Expo (SDK 54) and Expo Router. All data is local-only
 (AsyncStorage) — there's no backend yet, so nothing syncs across devices.
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for how it's put together.
+See [Architecture.md](./Architecture.md) for how it's put together.
 
 ## Requirements
 
