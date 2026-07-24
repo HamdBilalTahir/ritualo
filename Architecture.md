@@ -146,6 +146,20 @@ detail sheet covers the bottom ~55% of the viewport, so the celebration zoom
 targets `viewportH * 0.32` (the visible "peek" band above the sheet), not
 the full viewport's vertical center.
 
+## Fox companion
+
+`src/components/FoxCompanion.tsx` is a hand-drawn `react-native-svg`
+character (no Rive/Lottie — hand-authoring a rigged character in either
+format without a visual editor isn't practical) animated with Reanimated:
+an idle loop (body bob, tail sway, periodic blink), a wave, and a celebrate
+reaction, plus a tappable speech bubble cycling encouraging lines.
+
+It's mounted once in `app/(app)/_layout.tsx`, floating above the tab bar so
+it persists across every tab, not just Home. That layout watches
+`completions.length` for increases and flips the fox to `celebrate` mood for
+~2.6s whenever anyone in the family finishes a habit, from wherever you are
+in the app.
+
 ## Known constraints
 
 - **No backend, no real auth.** `signUp`/`signIn` just persist
