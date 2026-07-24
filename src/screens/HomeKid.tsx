@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/ThemeContext';
-import { images, radius, spacing, touchTarget } from '../theme/tokens';
+import { radius, spacing, touchTarget } from '../theme/tokens';
 import { useAppState } from '../context/AppStateContext';
-import { ScrimImage } from '../components/ScrimImage';
+import { ForestScene } from '../components/ForestScene';
 import { AvatarCircle } from '../components/AvatarCircle';
 
 export default function HomeKid() {
@@ -20,44 +20,46 @@ export default function HomeKid() {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrimImage source={images.magicalForestHero} strength="soft">
-        <View style={[styles.topRow, { paddingTop: insets.top + spacing.md }]}>
-          <AvatarCircle uri={activeMember?.avatarUri} emoji={activeMember?.emoji} size={40} ringColor="#fff" />
-          <View style={styles.starsPill}>
-            <Text style={styles.starsText}>⭐ {totalStars}</Text>
-          </View>
-        </View>
+      {/* Non-interactive: this backdrop spans the whole screen behind a scrolling
+          list, so it can't also claim pan gestures without fighting the ScrollView. */}
+      <ForestScene completions={completions} habits={habits} interactive={false} />
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[styles.bubbleWrap, { paddingBottom: insets.bottom + spacing.xl }]}
-        >
-          {myHabits.length === 0 && (
-            <Text style={styles.emptyText}>Ask a grown-up to add your first ritual! 🌱</Text>
-          )}
-          {myHabits.map((h) => {
-            const done = isCompletedToday(h.id);
-            return (
-              <Pressable
-                key={h.id}
-                disabled={done}
-                onPress={() => router.push({ pathname: '/checkin/[habitId]', params: { habitId: h.id } })}
-                style={[styles.bubble, done && styles.bubbleDone]}
-              >
-                <View style={[styles.emoji, { backgroundColor: done ? c.brandTertiary : c.brandSecondary }]}>
-                  <Text style={{ fontSize: 26 }}>{h.emoji}</Text>
-                </View>
-                <Text style={styles.bubbleLabel}>{h.label}</Text>
-                <View style={[styles.trailing, { backgroundColor: done ? c.brand : c.brandSecondary }]}>
-                  <Text style={{ fontFamily: 'Nunito_500Medium', fontSize: 15, color: done ? '#fff' : '#333B31' }}>
-                    {done ? '✓' : '→'}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </ScrimImage>
+      <View style={[styles.topRow, { paddingTop: insets.top + spacing.md }]}>
+        <AvatarCircle uri={activeMember?.avatarUri} emoji={activeMember?.emoji} size={40} ringColor="#fff" />
+        <View style={styles.starsPill}>
+          <Text style={styles.starsText}>⭐ {totalStars}</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.bubbleWrap, { paddingBottom: insets.bottom + spacing.xl }]}
+      >
+        {myHabits.length === 0 && (
+          <Text style={styles.emptyText}>Ask a grown-up to add your first ritual! 🌱</Text>
+        )}
+        {myHabits.map((h) => {
+          const done = isCompletedToday(h.id);
+          return (
+            <Pressable
+              key={h.id}
+              disabled={done}
+              onPress={() => router.push({ pathname: '/checkin/[habitId]', params: { habitId: h.id } })}
+              style={[styles.bubble, done && styles.bubbleDone]}
+            >
+              <View style={[styles.emoji, { backgroundColor: done ? c.brandTertiary : c.brandSecondary }]}>
+                <Text style={{ fontSize: 26 }}>{h.emoji}</Text>
+              </View>
+              <Text style={styles.bubbleLabel}>{h.label}</Text>
+              <View style={[styles.trailing, { backgroundColor: done ? c.brand : c.brandSecondary }]}>
+                <Text style={{ fontFamily: 'Nunito_500Medium', fontSize: 15, color: done ? '#fff' : '#333B31' }}>
+                  {done ? '✓' : '→'}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }

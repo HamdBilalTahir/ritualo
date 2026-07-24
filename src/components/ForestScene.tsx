@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ImageBackground } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -70,7 +70,17 @@ export function ForestScene({
   highlightId?: string | null;
   interactive?: boolean;
 }) {
-  const { width: viewportW, height: viewportH } = useWindowDimensions();
+  // Measure our own container rather than the global window, so this works
+  // both full-screen (check-in) and embedded in a shorter frame (Home hero).
+  const window = useWindowDimensions();
+  const [size, setSize] = useState({ width: window.width, height: window.height });
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
+  };
+  const viewportW = size.width;
+  const viewportH = size.height;
+
   const items = React.useMemo(() => layoutForest(completions, habits), [completions, habits]);
 
   const fitScale = Math.max(viewportW / FOREST_WORLD.width, viewportH / FOREST_WORLD.height, MIN_SCALE);
@@ -106,18 +116,36 @@ export function ForestScene({
     return Math.min(max, Math.max(min, ty));
   };
 
+  // Shared values only take their initial value once, so if this component's
+  // measured container size changes after mount (e.g. it's embedded in a
+  // shorter frame than the full window), snap - don't animate - to the
+  // correct fit/center for the real size.
   useEffect(() => {
     const target = items.find((i) => i.id === highlightId);
     const focusX = target ? target.x : worldCenterX;
     const focusY = target ? target.y : worldCenterY;
     const s = target ? Math.min(1.1, MAX_SCALE) : fitScale;
-    // The bottom ~55% of the screen is covered by the opaque detail sheet, so
-    // a celebrated item should land in the visible "peek" band above it, not
-    // dead-center of the full (mostly hidden) viewport.
     const screenTargetY = target ? viewportH * 0.32 : viewportH / 2;
+    scale.value = s;
+    translateX.value = clampX(viewportW / 2 - focusX * s - worldCenterX * (1 - s), s);
+    translateY.value = clampY(screenTargetY - focusY * s - worldCenterY * (1 - s), s);
+    savedScale.value = s;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewportW, viewportH]);
+
+  // Animate to the newly celebrated item.
+  useEffect(() => {
+    if (!highlightId) return;
+    const target = items.find((i) => i.id === highlightId);
+    if (!target) return;
+    const s = Math.min(1.1, MAX_SCALE);
+    // The bottom ~55% of the check-in screen is covered by the opaque detail
+    // sheet, so the celebrated item should land in the visible "peek" band
+    // above it, not dead-center of the full (mostly hidden) viewport.
+    const screenTargetY = viewportH * 0.32;
     scale.value = withTiming(s, { duration: 700 });
-    translateX.value = withTiming(clampX(viewportW / 2 - focusX * s - worldCenterX * (1 - s), s), { duration: 700 });
-    translateY.value = withTiming(clampY(screenTargetY - focusY * s - worldCenterY * (1 - s), s), { duration: 700 });
+    translateX.value = withTiming(clampX(viewportW / 2 - target.x * s - worldCenterX * (1 - s), s), { duration: 700 });
+    translateY.value = withTiming(clampY(screenTargetY - target.y * s - worldCenterY * (1 - s), s), { duration: 700 });
     savedScale.value = s;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId]);
@@ -169,7 +197,7 @@ export function ForestScene({
   );
 
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0E1712' }]}>
+    <View onLayout={onLayout} style={[StyleSheet.absoluteFill, { backgroundColor: '#0E1712', overflow: 'hidden' }]}>
       {interactive ? <GestureDetector gesture={gesture}>{content}</GestureDetector> : content}
     </View>
   );

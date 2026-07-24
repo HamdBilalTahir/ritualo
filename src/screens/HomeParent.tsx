@@ -3,55 +3,39 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '../theme/ThemeContext';
-import { images, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
 import { useAppState } from '../context/AppStateContext';
-import { GrowthType } from '../data/templates';
-import { ScrimImage } from '../components/ScrimImage';
+import { ForestScene } from '../components/ForestScene';
 import { AvatarCircle } from '../components/AvatarCircle';
-
-const GROWTH_META: Record<GrowthType, { label: string; emoji: string }> = {
-  mushroom: { label: 'mushrooms', emoji: '🍄' },
-  firefly: { label: 'fireflies', emoji: '✨' },
-  tree: { label: 'trees', emoji: '🌲' },
-  creature: { label: 'creatures', emoji: '🦊' },
-};
 
 export default function HomeParent() {
   const c = useColors();
   const insets = useSafeAreaInsets();
-  const { family, members, habits, isCompletedToday, forest, activeMember, streakFor, growthCounts } =
+  const { family, members, habits, completions, isCompletedToday, forest, activeMember, streakFor } =
     useAppState();
-
-  const counts = growthCounts();
 
   return (
     <View style={{ flex: 1, backgroundColor: c.surface }}>
       <View style={[styles.forestFrame, { paddingTop: insets.top }]}>
-        <ScrimImage source={images.magicalForestHero} strength="strong">
-          <View style={styles.topBar}>
-            <View>
-              <Text style={styles.greetSmall}>Good morning</Text>
-              <Text style={styles.greetBig}>{family?.forestName}</Text>
-            </View>
-            <Pressable onPress={() => router.push('/(app)/profile')} style={styles.settingsBtn}>
-              <Text style={{ fontSize: 16 }}>⚙️</Text>
-            </Pressable>
+        <ForestScene completions={completions} habits={habits} interactive />
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.greetSmall}>Good morning</Text>
+            <Text style={styles.greetBig}>{family?.forestName}</Text>
           </View>
-          <View style={styles.stageChip}>
-            <Text style={styles.stageChipText}>
-              🌿 {forest.stage} stage
-              {forest.next ? ` · ${forest.toNext} to ${forest.next.name}` : ' · fully grown!'}
-            </Text>
-          </View>
-        </ScrimImage>
-      </View>
-
-      <View style={[styles.statsRow, { backgroundColor: c.surface, borderColor: c.border }]}>
-        {(Object.keys(GROWTH_META) as GrowthType[]).map((key) => (
-          <Text key={key} style={[styles.statText, { color: c.onSurfaceSecondary }]}>
-            {GROWTH_META[key].emoji} {counts[key] ?? 0} {GROWTH_META[key].label}
+          <Pressable onPress={() => router.push('/(app)/profile')} style={styles.settingsBtn}>
+            <Text style={{ fontSize: 16 }}>⚙️</Text>
+          </Pressable>
+        </View>
+        <View style={styles.stageChip}>
+          <Text style={styles.stageChipText}>
+            🌿 {forest.stage} stage
+            {forest.next ? ` · ${forest.toNext} to ${forest.next.name}` : ' · fully grown!'}
           </Text>
-        ))}
+        </View>
+        <View style={styles.hintChip} pointerEvents="none">
+          <Text style={styles.hintChipText}>Pinch & drag to explore</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -118,7 +102,7 @@ export default function HomeParent() {
 }
 
 const styles = StyleSheet.create({
-  forestFrame: { height: '34%' },
+  forestFrame: { height: '42%' },
   topBar: {
     position: 'absolute',
     top: spacing.lg,
@@ -150,16 +134,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   stageChipText: { color: '#FFFFFF', fontFamily: 'Nunito_500Medium', fontSize: 11.5 },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: spacing.md,
-    rowGap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
+  hintChip: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  statText: { fontFamily: 'Nunito_500Medium', fontSize: 11.5 },
+  hintChipText: { color: 'rgba(255,255,255,0.85)', fontFamily: 'Nunito_400Regular', fontSize: 10.5 },
   habitList: { flex: 1, paddingHorizontal: spacing.lg },
   sectionTitle: { fontFamily: 'Fraunces_500Medium', fontSize: 17, marginBottom: spacing.md },
   memberHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
