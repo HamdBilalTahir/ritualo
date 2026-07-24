@@ -105,13 +105,38 @@ else                   → /(app)/home
 - **Single-member mode**: triggered when opened with a `memberId` param
   (Profile → "Add a ritual"), skips the wizard chrome.
 
-## Growth / streaks
+Habits come from either a fixed template (`src/data/templates.ts`,
+role-specific lists) or "Create your own" — a custom label + `EmojiPicker`
+icon + a `growthType` pick (`growthTypeOptions`, each with a default
+`growthLabel` flavor line used in the check-in celebration). Both share the
+same 1–3 selection cap per member.
 
-Each habit has a `growthType` (`mushroom | firefly | tree | creature`) drawn
-from `src/data/templates.ts`'s role-specific template lists. Completions
-accumulate into `AppStateContext`'s `streakFor`/`growthCounts`, and total
-completions map to a forest stage (`FOREST_STAGES`: Seed → Sprout → Sapling →
-Grove → Glowing Grove) surfaced on the Parent Home screen.
+## Growth / forest scene
+
+Each habit has a `growthType` (`mushroom | firefly | tree | creature`).
+Completions accumulate into `AppStateContext`'s `streakFor`/`growthCounts`,
+and total completions map to a forest stage (`FOREST_STAGES`: Seed → Sprout
+→ Sapling → Grove → Glowing Grove) surfaced on the Parent Home screen.
+
+Beyond the aggregate counts, every completion also gets one **permanently
+placed sprite** on a persistent world canvas
+(`src/data/forestLayout.ts:layoutForest`) — position is a pure function of
+`(completion id, index among same-growth-type completions)`, so existing
+sprites never move as the forest grows, they only accumulate. `ForestScene`
+(`src/components/ForestScene.tsx`) renders that canvas with pinch/pan
+(react-native-gesture-handler `Gesture.Simultaneous(Pan, Pinch)` +
+Reanimated shared values) and is the check-in screen's background
+(`app/checkin/[habitId].tsx`) — explorable before you check in, and on
+completion it zooms/pans to the newly-grown sprite with a spring entrance +
+glow.
+
+Two non-obvious things baked into that math, worth knowing before touching
+it: CSS/RN `transform: scale` pivots around the element's own center, not
+`(0,0)`, so centering a world point at the viewport center needs a
+`worldCenter * (1 - scale)` compensation term; and the check-in screen's
+detail sheet covers the bottom ~55% of the viewport, so the celebration zoom
+targets `viewportH * 0.32` (the visible "peek" band above the sheet), not
+the full viewport's vertical center.
 
 ## Known constraints
 
