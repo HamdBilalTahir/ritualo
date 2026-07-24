@@ -21,6 +21,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ritualo needs access to your photos so you can set your family avatar.",
+          "cameraPermission": "Ritualo needs access to your camera so you can take a photo for your family avatar."
+        }
+      ]
+    ]
   }
 }

@@ -65,9 +65,15 @@ interface AppStateValue extends PersistedState {
   signUp: (email: string, name: string) => Promise<void>;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  createFamily: (forestName: string, parentName: string, emoji: string) => Promise<void>;
-  joinFamily: (code: string, memberName: string, role: 'parent' | 'kid', emoji: string) => Promise<void>;
-  addMember: (name: string, role: 'parent' | 'kid', emoji: string) => Promise<void>;
+  createFamily: (forestName: string, parentName: string, emoji: string, avatarUri: string) => Promise<void>;
+  joinFamily: (
+    code: string,
+    memberName: string,
+    role: 'parent' | 'kid',
+    emoji: string,
+    avatarUri: string
+  ) => Promise<void>;
+  addMember: (name: string, role: 'parent' | 'kid', emoji: string, avatarUri: string) => Promise<void>;
   setActiveMember: (memberId: string) => void;
   addHabit: (
     memberId: string,
@@ -145,27 +151,27 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [persist]);
 
   const createFamily = useCallback(
-    async (forestName: string, parentName: string, emoji: string) => {
+    async (forestName: string, parentName: string, emoji: string, avatarUri: string) => {
       const family: Family = { id: genId('fam'), forestName, inviteCode: genInviteCode() };
-      const member: Member = { id: genId('mem'), name: parentName, role: 'parent', emoji };
+      const member: Member = { id: genId('mem'), name: parentName, role: 'parent', emoji, avatarUri };
       persist({ ...state, family, members: [member], activeMemberId: member.id });
     },
     [state, persist]
   );
 
   const joinFamily = useCallback(
-    async (code: string, memberName: string, role: 'parent' | 'kid', emoji: string) => {
+    async (code: string, memberName: string, role: 'parent' | 'kid', emoji: string, avatarUri: string) => {
       // Demo mode: any 6-char code creates/joins a locally-simulated shared family.
       const family: Family = state.family ?? { id: genId('fam'), forestName: 'The Family Forest', inviteCode: code.toUpperCase() };
-      const member: Member = { id: genId('mem'), name: memberName, role, emoji };
+      const member: Member = { id: genId('mem'), name: memberName, role, emoji, avatarUri };
       persist({ ...state, family, members: [...state.members, member], activeMemberId: member.id });
     },
     [state, persist]
   );
 
   const addMember = useCallback(
-    async (name: string, role: 'parent' | 'kid', emoji: string) => {
-      const member: Member = { id: genId('mem'), name, role, emoji };
+    async (name: string, role: 'parent' | 'kid', emoji: string, avatarUri: string) => {
+      const member: Member = { id: genId('mem'), name, role, emoji, avatarUri };
       persist({ ...state, members: [...state.members, member] });
     },
     [state, persist]
