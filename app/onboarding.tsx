@@ -23,8 +23,8 @@ export default function Onboarding() {
             A shared Magical Forest that grows every time your family shows up for each other — one small
             ritual at a time.
           </Text>
-          <Button label="Begin the Journey →" onPress={() => router.push('/(auth)')} />
-          <Text style={styles.link} onPress={() => router.push({ pathname: '/(auth)', params: { mode: 'login' } })}>
+          <Button label="Begin the Journey →" onPress={() => router.push('/(auth)/auth')} />
+          <Text style={styles.link} onPress={() => router.push({ pathname: '/(auth)/auth', params: { mode: 'login' } })}>
             Already have an account? Sign in
           </Text>
         </View>

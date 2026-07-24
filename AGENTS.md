@@ -9,7 +9,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   Each family member's own device shows their own mode automatically — this
   is intentional, matches real multi-device family usage, and should stay
   this way even though an earlier design prototype showed a manual toggle.
-- **Auth is a single combined screen** (`app/(auth)/index.tsx`), not separate
+- **Auth is a single combined screen** (`app/(auth)/auth.tsx`), not separate
   sign-up/sign-in screens. It has a Log In / Sign Up segmented control, and
   in Sign Up mode asks for "Family name" (stored as `AuthUser.name`), Email,
   Password, one "Continue" button. Family/forest creation itself still
